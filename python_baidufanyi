@@ -1,0 +1,118 @@
+from tkinter import *
+from tkinter import ttk
+import requests
+from bs4 import BeautifulSoup
+import re
+import time
+from tkinter.messagebox import *
+import threading
+
+
+class BaiDuFanYi(object):
+    def __init__(self, master=None):
+        self.root = master
+        self.root.geometry('500x400')
+        self.root.resizable(width=False, height=False)
+        self.rzb = StringVar()
+        self.form_one = StringVar()
+        self.form_two = StringVar()
+        self.testyuzhong = self.languageList()
+        self.JieMianBuJu()
+
+    def JieMianBuJu(self):
+        self.page = Frame(self.root)
+        self.page.pack()
+
+        UserInputLable = Label(self.page, text="请输入待翻译内容、语种：", font=('黑体', 14))
+        UserInputLable.grid(row=0, stick=W, column=0, pady=15)
+        UserInputEntry = Entry(self.page, textvariable=self.rzb, width=62, justify='left')
+        UserInputEntry.grid(row=2, pady=15)
+
+        jieguoxianshi = Label(self.page, text='翻译结果显示（需选择翻译语种）：', font=('黑体', 14))
+        jieguoxianshi.grid(row=3, stick=W, pady=10)
+        self.fanyijieguo = Label(self.page, text='此处显示翻译内容', font=(12), width=55, height=6, wraplength=400,
+                                 justify='left', relief=SUNKEN)
+        self.fanyijieguo.grid(row=5, pady=20)
+
+        self.yuzhonglist_1 = ttk.Combobox(self.page, textvariable=self.form_one)
+        self.yuzhonglist_1['values'] = list(self.testyuzhong.keys())
+        self.yuzhonglist_1['state'] = 'readonly'
+        self.yuzhonglist_1.current(0)
+        self.yuzhonglist_1.grid(row=1, column=0)
+
+        self.yuzhonglist_2 = ttk.Combobox(self.page, textvariable=self.form_two)
+        self.yuzhonglist_2['values'] = list(self.testyuzhong.keys())
+        self.yuzhonglist_2['state'] = 'readonly'
+        self.yuzhonglist_2.current(0)
+        self.yuzhonglist_2.grid(row=4, column=0)
+
+        fanyianniu = Button(self.page, text='开始翻译', command=lambda: self.thread_it(self.fanyiButton))
+        fanyianniu.grid(row=6)
+
+    def fanyiButton(self):
+        if len(self.rzb.get()) == 0:
+            showerror(title='用户输入内容不可为空', message='翻译内容不可为空！！')
+            self.fanyijieguo.configure(text='此处显示翻译内容')
+
+        elif self.yuzhonglist_1.get() == self.yuzhonglist_2.get():
+            showerror(title='报错', message='翻译语种不可相同！！')
+
+        elif len(self.rzb.get()) > 100:
+            showerror(title='输入字符过多', message='最大可输入字符为100')
+        else:
+            for i in range(3):
+                self.fanyijieguo.configure(text='结果翻译中请稍等' + '.' * (i + 1))
+                time.sleep(0.2)
+            testmsg = self.testBaiduFanyi()
+            self.fanyijieguo.configure(text=testmsg)
+
+    # 获取网页常用语种及编码
+    def languageList(self):
+        language = {}  # 存放爬起的常用语种及编码
+        url = 'https://fanyi.baidu.com/'
+        r = requests.get(url)
+        r.encoding = 'utf-8'  # 修改爬取内容字符编码，utf-8
+        a = BeautifulSoup(r.text, 'html.parser')  # 使用beautifulsoup解析网页
+        b = a.find_all(attrs={'class': 'data-lang'})  # 获取需要的class内容
+
+        for i in b:
+            yuzhong = i.text.strip('\n')  # 网页数据有回车，需去掉
+            languageValue = re.findall(r'value="(.*?)"', str(i))  # 语种编码
+            language[yuzhong] = languageValue[0]  # 由于正则匹配自动生成list，需str,则取第一个元素
+
+        return language
+
+    # 调用百度翻译接口，进行翻译
+    # 若想修改语种，直接修改data内的数据
+    def testBaiduFanyi(self):
+
+        self.url = 'https://fanyi.baidu.com/transapi'
+
+        # 根据语种list，用户可自定义所需语种
+        data = {
+            'from': self.testyuzhong[self.yuzhonglist_1.get()],
+            'to': self.testyuzhong[self.yuzhonglist_2.get()],
+            'query': self.rzb.get()
+        }
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:61.0) Gecko/20100101 Firefox/61.0',
+        }
+
+        test = requests.post(self.url, data=data, headers=headers)
+
+        return test.json()['data'][0]['dst']
+
+    # 打包进线程（耗时的操作）否则点击按钮后，界面会卡死
+    @staticmethod
+    def thread_it(func, *args):
+        t = threading.Thread(target=func, args=args)
+        t.setDaemon(True)  # 守护--就算主界面关闭，线程也会留守后台运行（不对!）
+        t.start()  # 启动
+        # t.join()          # 阻塞--会卡死界面！
+
+
+if __name__ == '__main__':
+    root = Tk()
+    root.title('翻译小工具')
+    BaiDuFanYi(root)
+    root.mainloop()
