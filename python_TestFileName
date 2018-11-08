@@ -1,0 +1,23 @@
+import os
+
+# python批量重命名文件脚本
+# 根据原有文件后缀保存文件
+# 跳过文件夹文件夹
+# 注意点，各项操作均需加上路径，可使用os.path.join()
+
+
+TestPath = input('请输入需要批量命名的文件路径：')
+FileName = input("请输入需要保存的文件名：")
+
+# 判断文件权限是否可写
+# 若文件路径错误，也会报False ------- 可判断文件路径是否正确
+if not os.access(TestPath, os.W_OK):
+    print('当前路径文件不可写或文件路径错误')
+else:
+    for n, i in enumerate(os.listdir(TestPath)):
+        if os.path.isdir(os.path.join(TestPath, i)):
+            pass
+        else:
+            # 切割原有文件后缀信息，保持文件类型不变
+            houzhui = os.path.splitext(i)[1]
+            os.renames(os.path.join(TestPath, i), os.path.join(TestPath, '%s(%d)%s' % (FileName, n, houzhui)))
