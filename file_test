@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+
+"""
+@author: rzb
+@software: PyCharm
+@file: file_test.py
+@time: 2019/8/21 20:26
+"""
+
+import os
+import time
+import json
+
+
+# 当前指定文件为当前文件夹，若想指定文件夹文件，需指向路径
+class FileTest(object):
+
+    def __init__(self, file_name, msg):
+        self.file_name = file_name
+        self.msg = msg
+
+    def write_msg(self):
+        """
+        :return:    写入指定内容至指定文件
+        """
+        try:
+            with open(self.return_file_name(), 'a') as file:
+                file.write(str(self.msg) + "\n")
+        except Exception as e:
+            print(e)
+
+    def del_file(self):
+        """
+        :return: 删除指定文件
+        """
+        if os.path.exists(os.path.join(os.getcwd(), self.return_file_name())):
+            os.system('del %s' % self.return_file_name())
+        else:
+            # 文件不存在
+            pass
+
+    def return_file_name(self):
+        """
+        :return: 返回文件名，如文件无后缀名，则自动添加txt后缀
+        """
+        if '.' not in self.file_name or len(str(self.file_name).split('.')) <= 1:
+            return self.file_name + '.txt'
+        else:
+            return self.file_name
+
+
+if __name__ == '__main__':
+    file_name = 'test.txt'
+    msg = {'a': 1, 'b': 2}
+
+    test = FileTest(file_name, msg)
+    test.write_msg()
+    time.sleep(5)
+    test.del_file()
