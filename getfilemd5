@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+
+"""
+@author: rzb
+@software: PyCharm
+@file: md5.py
+@time: 2019/8/28 14:49
+"""
+
+import os
+import hashlib
+from datetime import datetime
+from file_test import FileTest
+import sys
+
+
+class GetFileMd5(object):
+    def __init__(self, path, file_name):
+        self.path = path
+        self.file_name = file_name
+
+    def check_file(self):
+        if os.path.isfile(os.path.join(self.path, self.file_name)) == False:
+            print("当前指定文件类型错误，仅文件可获取md5值")
+        elif os.path.isdir(os.path.join(self.path, self.file_name)) == True:
+            print('当前指定文件为文件夹，无法获取md5值')
+        elif os.path.exists(os.path.join(self.path, self.file_name)) == False:
+            print("当前指定文件不存在")
+        else:
+            pass
+
+    def get_file_md5(self):
+        """
+        若文件过大，分段读取，通过update获得md5
+        :return:
+        """
+        with open(os.path.join(self.path, self.file_name), 'rb') as file:
+            md5_obj = hashlib.md5()
+            while True:
+                d = file.read(8096)
+                if not d:
+                    break
+                md5_obj.update(d)
+
+            md5_code = md5_obj.hexdigest()
+
+            return md5_code.upper()
+
+    def get_smallfile_md(self):
+        """若文件较小，可直接读取获取md5"""
+        with open(os.path.join(self.path, self.file_name), 'rb') as file:
+            md5_code = hashlib.md5(file.read()).hexdigest()
+            return md5_code.upper()  # 输出纯大写MD5值
+
+    def get_str_md5(self, str):
+        # 需指定解析字符串的编码
+        md5_code = hashlib.md5(str.encode('utf-8'))
+        return md5_code.hexdigest().upper()
+
+    def write_log(self):
+
+        self.check_file()
+
+        size = os.path.getsize(os.path.join(self.path, self.file_name))  # 单位为B
+
+        # 计算文件的所属单位
+        if size <= 1024:
+            new_size = str(size) + 'B'
+        elif 1024 < size < 1048576:
+            new_size = str(round(size / 1024)) + ' KB'
+        else:
+            new_size = str(round(size / (1024 * 1024), 2)) + ' MB'
+
+        write_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        md5_code = self.get_file_md5()
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
+
+        file_name = 'MD5_log.txt'
+        msg = '{文件名："%s"，文件大小："%s"，写入时间："%s"，MD5值："%s"}' % (self.file_name, new_size, write_time, md5_code)
+        file = FileTest(file_name, msg.encode("gbk"))
+        file.write_msg()
+
+
+if __name__ == '__main__':
+    file = GetFileMd5(os.path.dirname(__file__), 'header.txt')
+
+    try:
+        file.write_log()
+    except Exception as e:
+        if '系统找不到指定的文件' in str(e):
+            print("文件不存在或指定路径错误,系统找不到指定的文件")
+        else:
+            print(e)
